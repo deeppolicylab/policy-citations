@@ -1,0 +1,1197 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Policy Citations</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>
+<style>
+:root{
+  --ink:#121A30;
+  --ink-card:#1B2747;
+  --ink-card-2:#202E54;
+  --hairline:rgba(212,162,76,0.22);
+  --gold:#D4A24C;
+  --teal:#3FA092;
+  --brick:#C1654A;
+  --muted:#93A0C2;
+  --paper:#F4F0E6;
+  --display:'Fraunces', Georgia, serif;
+  --body:'Inter', -apple-system, sans-serif;
+  --mono:'IBM Plex Mono', monospace;
+}
+*{box-sizing:border-box;}
+body{
+  margin:0; background:var(--ink); color:var(--paper);
+  font-family:var(--body); -webkit-font-smoothing:antialiased;
+}
+a{color:var(--gold);}
+a:hover{color:var(--teal);}
+
+/* ---- Header / masthead ---- */
+.masthead{
+  border-bottom:1px solid var(--hairline);
+  padding:28px clamp(20px,5vw,56px) 0;
+  position:relative;
+}
+.masthead-top{
+  display:flex; justify-content:space-between; align-items:flex-start; gap:24px;
+  flex-wrap:wrap;
+}
+.eyebrow{
+  font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--gold); margin:0 0 10px;
+}
+h1.title{
+  font-family:var(--display); font-weight:600; font-size:clamp(28px,3.4vw,42px);
+  margin:0 0 6px; letter-spacing:-0.01em;
+}
+.subtitle{ color:var(--muted); font-size:15px; margin:0 0 22px; max-width:640px;}
+.masthead-meta{
+  font-family:var(--mono); font-size:11px; color:var(--muted); text-align:right;
+  line-height:1.6;
+}
+.masthead-meta b{ color:var(--paper); }
+
+/* ---- Tabs ---- */
+.tabs{
+  display:flex; gap:2px; margin-top:6px; overflow-x:auto;
+}
+.tab-btn{
+  font-family:var(--mono); font-size:12px; letter-spacing:.08em; text-transform:uppercase;
+  background:none; border:none; color:var(--muted); padding:12px 18px;
+  cursor:pointer; border-bottom:2px solid transparent; white-space:nowrap;
+  transition:color .15s, border-color .15s;
+}
+.tab-btn:hover{ color:var(--paper); }
+.tab-btn.active{ color:var(--gold); border-bottom-color:var(--gold); }
+
+main{ padding:28px clamp(20px,5vw,56px) 64px; max-width:1320px; margin:0 auto; }
+.page{ display:none; }
+.page.active{ display:block; animation:fade .25s ease; }
+@keyframes fade{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);} }
+
+/* ---- Grid / cards ---- */
+.row{ display:grid; gap:16px; margin-bottom:16px; }
+.row.cols-4{ grid-template-columns:repeat(4,1fr); }
+.row.cols-2-60-40{ grid-template-columns:60% 1fr; }
+.row.cols-2-55-45{ grid-template-columns:55% 1fr; }
+.row.cols-2-38-62{ grid-template-columns:38% 1fr; }
+@media (max-width:880px){
+  .row.cols-4{ grid-template-columns:repeat(2,1fr); }
+  .row.cols-2-60-40, .row.cols-2-55-45, .row.cols-2-38-62{ grid-template-columns:1fr; }
+}
+
+.card{
+  background:var(--ink-card); border:1px solid var(--hairline); border-radius:3px;
+  overflow:hidden;
+}
+.card-head{
+  font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase;
+  color:var(--muted); padding:13px 16px 11px; border-bottom:1px solid var(--hairline);
+}
+.card-body{ padding:14px 16px; }
+.card-body.tight{ padding:6px 10px; }
+
+/* ---- Value boxes ---- */
+.vbox{ padding:18px 18px 16px; position:relative; }
+.vbox .icon{ position:absolute; top:16px; right:16px; opacity:.35; font-size:20px; }
+.vbox .vlabel{
+  font-family:var(--mono); font-size:11px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted);
+}
+.vbox .vvalue{
+  font-family:var(--display); font-weight:600; font-size:2.3rem; margin-top:6px; line-height:1;
+}
+.vbox.gold{ border-left:3px solid var(--gold); }
+.vbox.teal{ border-left:3px solid var(--teal); }
+.vbox.brick{ border-left:3px solid var(--brick); }
+.vbox.muted2{ border-left:3px solid var(--muted); }
+
+/* ---- Tables ---- */
+table{ width:100%; border-collapse:collapse; font-size:13.5px; }
+thead th{
+  font-family:var(--mono); font-size:10.5px; letter-spacing:.06em; text-transform:uppercase;
+  color:var(--muted); text-align:left; padding:9px 10px; border-bottom:1px solid var(--hairline);
+  position:sticky; top:0; background:var(--ink-card);
+}
+tbody td{ padding:9px 10px; border-bottom:1px solid rgba(255,255,255,0.06); vertical-align:top; }
+tbody tr:hover{ background:rgba(255,255,255,0.025); }
+.scroll-table{ max-height:420px; overflow-y:auto; }
+.mono{ font-family:var(--mono); font-size:12px; color:var(--muted); }
+.num{ font-family:var(--mono); text-align:right; color:var(--paper); }
+.rank{ font-family:var(--mono); color:var(--gold); width:34px; }
+
+.seal{ display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:7px; }
+.seal.gold{ background:var(--gold); } .seal.teal{ background:var(--teal); }
+.seal.brick{ background:var(--brick); } .seal.muted2{ background:var(--muted); }
+
+.legend{ display:flex; gap:16px; flex-wrap:wrap; padding:10px 16px 4px; font-size:12px; color:var(--muted); }
+.legend span{ display:inline-flex; align-items:center; }
+
+.foot-note{
+  font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:6px; padding:0 2px;
+}
+.plot{ width:100%; }
+</style>
+</head>
+<body>
+
+<header class="masthead">
+  <div class="masthead-top">
+    <div>
+      <p class="eyebrow">Research → Policy · Citations</p>
+      <h1 class="title">Policy Citations</h1>
+      <p class="subtitle">Where our research reaches policy makers</p>
+    </div>
+    <div class="masthead-meta" id="meta-block"></div>
+  </div>
+  <nav class="tabs" id="tabs"></nav>
+</header>
+
+<main id="pages"></main>
+
+<script id="bundle-data" type="application/json">{
+  "summary": {
+    "total": 86,
+    "orgs": 54,
+    "countries": 19,
+    "papers": 17
+  },
+  "top_papers": [
+    {
+      "paper": "Quantifying the cost savings of global solar photovoltaic supply chains",
+      "citations": 26,
+      "doi": "10.1038/s41586-022-05316-6"
+    },
+    {
+      "paper": "Enabling a Rapid and Just Transition away from Coal in China",
+      "citations": 9,
+      "doi": "10.1016/j.oneear.2020.07.012"
+    },
+    {
+      "paper": "Addressing carbon Offsetters\u2019 Paradox: Lessons from Chinese wind CDM",
+      "citations": 8,
+      "doi": "10.1016/j.enpol.2013.09.021"
+    },
+    {
+      "paper": "Rapid cost decrease of renewables and storage accelerates the decarbonization of China\u2019s power system",
+      "citations": 8,
+      "doi": "10.1038/s41467-020-16184-x"
+    },
+    {
+      "paper": "Challenges and opportunities for carbon neutrality in China",
+      "citations": 7,
+      "doi": "10.1038/s43017-021-00244-x"
+    },
+    {
+      "paper": "Modeling the impact of EVs in the Chinese power system: Pathways for implementing emissions reduction commitments in the power and transportation sectors",
+      "citations": 4,
+      "doi": "10.1016/j.enpol.2020.111962"
+    },
+    {
+      "paper": "SWITCH-China: A Systems Approach to Decarbonizing China\u2019s Power System",
+      "citations": 3,
+      "doi": "10.1021/acs.est.6b01345"
+    },
+    {
+      "paper": "ELITE cities: A low-carbon eco-city evaluation tool for China",
+      "citations": 3,
+      "doi": "10.1016/j.ecolind.2014.09.018"
+    },
+    {
+      "paper": "Assessing the impacts of nuclear desalination and geoengineering to address China's water shortages",
+      "citations": 2,
+      "doi": "10.1016/j.desal.2014.12.028"
+    },
+    {
+      "paper": "Experiences and lessons from China\u2019s success in providing electricity for all",
+      "citations": 2,
+      "doi": "10.1016/j.resconrec.2017.03.011"
+    },
+    {
+      "paper": "Fewer than 15% of coal power plant workers in China can easily shift to green jobs by 2060",
+      "citations": 2,
+      "doi": "10.1016/j.oneear.2024.10.006"
+    },
+    {
+      "paper": "Climate change impacts on planned supply\u2013demand match in global wind and solar energy systems",
+      "citations": 2,
+      "doi": "10.1038/s41560-023-01304-w"
+    },
+    {
+      "paper": "Disentangling the drivers of carbon prices in China's ETS pilots \u2014 An EEMD approach",
+      "citations": 2,
+      "doi": "10.1016/j.techfore.2018.11.009"
+    },
+    {
+      "paper": "Developing large coal-power bases in China",
+      "citations": 1,
+      "doi": "10.1017/cbo9781316136058.003"
+    },
+    {
+      "paper": "Deploying solar photovoltaic energy first in carbon-intensive regions brings gigatons more carbon mitigations to 2060",
+      "citations": 1,
+      "doi": "10.1038/s43247-023-01006-x"
+    },
+    {
+      "paper": "Relevance of Nuclear Desalination as an Alternative to Water Transfer Geoengineering Projects: Example of China",
+      "citations": 1,
+      "doi": "10.1016/b978-0-12-815244-7.00007-6"
+    },
+    {
+      "paper": "Where, when and how much wind is available? A provincial-scale wind resource assessment for China",
+      "citations": 1,
+      "doi": "10.1016/j.enpol.2014.07.003"
+    }
+  ],
+  "orgs": [
+    {
+      "org": "World Bank",
+      "country": "IGO",
+      "source_type": "igo",
+      "citations": 7,
+      "latest": "2024-08-01",
+      "doc_url": "https://hdl.handle.net/10986/41919"
+    },
+    {
+      "org": "United Nations",
+      "country": "IGO",
+      "source_type": "igo",
+      "citations": 5,
+      "latest": "2024-08-01",
+      "doc_url": "https://digitallibrary.un.org/record/4060754?ln=en"
+    },
+    {
+      "org": "World Trade Organization",
+      "country": "IGO",
+      "source_type": "igo",
+      "citations": 5,
+      "latest": "2025-12-14",
+      "doc_url": "https://www.wto.org/english/res_e/publications_e/gvcreport2025_e.htm"
+    },
+    {
+      "org": "Grantham Institute",
+      "country": "UK",
+      "source_type": "think tank",
+      "citations": 4,
+      "latest": "2023-02-16",
+      "doc_url": "https://www.lse.ac.uk/granthaminstitute/publication/embracing-the-new-paradigm-of-green-development/"
+    },
+    {
+      "org": "International Renewable Energy Agency",
+      "country": "IGO",
+      "source_type": "igo",
+      "citations": 3,
+      "latest": "2024-10-01",
+      "doc_url": "https://www.irena.org/Publications/2024/Oct/Renewable-energy-and-jobs-Annual-review-2024"
+    },
+    {
+      "org": "Publications Office of the European Union",
+      "country": "EU",
+      "source_type": "government",
+      "citations": 3,
+      "latest": "2022-06-01",
+      "doc_url": "https://op.europa.eu/en/publication-detail/-/publication/31c9b68c-e21b-11ec-a534-01aa75ed71a1/language-en/format-PDF"
+    },
+    {
+      "org": "New York State",
+      "country": "USA",
+      "source_type": "government",
+      "citations": 3,
+      "latest": "2022-12-15",
+      "doc_url": "https://climate.ny.gov/-/media/Project/Climate/Files/Appendix-G.pdf"
+    },
+    {
+      "org": "IIASA",
+      "country": "Austria",
+      "source_type": "think tank",
+      "citations": 2,
+      "latest": "2021-11-25",
+      "doc_url": "https://pure.iiasa.ac.at/id/eprint/17658/?template=default_internal"
+    },
+    {
+      "org": "Belfer Center",
+      "country": "USA",
+      "source_type": "think tank",
+      "citations": 2,
+      "latest": "2025-09-16",
+      "doc_url": "https://www.belfercenter.org/research-analysis/sustaining-global-energy-transition"
+    },
+    {
+      "org": "Korea Energy Economics Institute",
+      "country": "South Korea",
+      "source_type": "think tank",
+      "citations": 2,
+      "latest": "2023-01-01",
+      "doc_url": "https://www.nkis.re.kr/subject_view1.do?otcCd=RG&otcNm=\uc77c\ubc18\uc5f0\uad6c\ubcf4\uace0\uc11c&otpId=OTP_0000000000013562&otpSeq=0&eoSeq=383869&currentPage=1&searchSelect=&searchWord=&returnPage=newest_list.do&schLclaScsId=&pblYy=&agcNms=\uc5d0\ub108\uc9c0\uacbd\uc81c\uc5f0\uad6c\uc6d0&listPerPage=50"
+    },
+    {
+      "org": "Wetenschappelijke Raad voor het Regeringsbeleid",
+      "country": "Netherlands",
+      "source_type": "government",
+      "citations": 2,
+      "latest": "2026-01-20",
+      "doc_url": "https://www.wrr.nl/documenten/2025/11/26/met-de-mondiale-demografie-mee.-anticiperen-op-krimpend-arbeidsaanbod-in-het-buitenland"
+    },
+    {
+      "org": "United Nations Framework Convention on Climate Change",
+      "country": "IGO",
+      "source_type": "igo",
+      "citations": 2,
+      "latest": "2025-07-14",
+      "doc_url": "https://unfccc.int/documents/648788"
+    },
+    {
+      "org": "Stockholm Environment Institute",
+      "country": "Sweden",
+      "source_type": "think tank",
+      "citations": 2,
+      "latest": "2017-11-27",
+      "doc_url": "https://www.sei.org/publications/international-transfers-article-6-ndcs/"
+    },
+    {
+      "org": "Science and Technology Policy Institute",
+      "country": "South Korea",
+      "source_type": "think tank",
+      "citations": 2,
+      "latest": "2021-01-01",
+      "doc_url": "https://www.nkis.re.kr/subject_view1.do?otcCd=RB&otcNm=\uae30\ubcf8\uc5f0\uad6c\ubcf4\uace0\uc11c&otpId=ACPT_000000000028215&otpSeq=0&eoSeq=322248&currentPage=4&searchSelect=&searchWord=&returnPage=newest_list.do&schLclaScsId=&pblYy=&agcNms=\uacfc\ud559\uae30\uc220\uc815\ucc45\uc5f0\uad6c\uc6d0&listPerPage=50"
+    },
+    {
+      "org": "Center for Strategic and International Studies",
+      "country": "USA",
+      "source_type": "think tank",
+      "citations": 2,
+      "latest": "2024-02-22",
+      "doc_url": "https://bigdatachina.csis.org/why-decarbonization-requires-globalization-an-interview-with-michael-davidson/"
+    },
+    {
+      "org": "Banque de France",
+      "country": "France",
+      "source_type": "government",
+      "citations": 2,
+      "latest": "2024-08-27",
+      "doc_url": "https://www.banque-france.fr/fr/publications-et-statistiques/publications/haute-tension-financer-la-voie-vers-la-sortie-du-charbon"
+    },
+    {
+      "org": "Center for Global Development",
+      "country": "USA",
+      "source_type": "think tank",
+      "citations": 1,
+      "latest": "2025-12-15",
+      "doc_url": "https://www.cgdev.org/publication/forest-worker-quantifying-co2-reduction-contribution-marginal-green-migrant-worker"
+    },
+    {
+      "org": "Canadian Centre for Policy Alternatives (CCPA)",
+      "country": "Canada",
+      "source_type": "think tank",
+      "citations": 1,
+      "latest": "2022-10-25",
+      "doc_url": "https://www.policyalternatives.ca/publications/reports/bet-big"
+    },
+    {
+      "org": "CEEPR",
+      "country": "USA",
+      "source_type": "think tank",
+      "citations": 1,
+      "latest": "2025-04-08",
+      "doc_url": "https://ceepr.mit.edu/workingpaper/good-spillover-bad-spillover-industrial-policy-trade-and-the-political-economy-of-decarbonization/"
+    },
+    {
+      "org": "Australian Policy Online",
+      "country": "Australia",
+      "source_type": "other",
+      "citations": 1,
+      "latest": "2018-08-19",
+      "doc_url": "https://apo.org.au/node/187451"
+    },
+    {
+      "org": "Bipartisan Policy Center",
+      "country": "USA",
+      "source_type": "think tank",
+      "citations": 1,
+      "latest": "2013-02-27",
+      "doc_url": "https://bipartisanpolicy.org/library/americas-energy-resurgence-sustaining-success-confronting-challenges/"
+    },
+    {
+      "org": "Agora Energiewende",
+      "country": "Germany",
+      "source_type": "think tank",
+      "citations": 1,
+      "latest": "2023-09-11",
+      "doc_url": "https://www.agora-energiewende.de/en/publications/ensuring-resilience-in-europes-energy-transition/"
+    },
+    {
+      "org": "Government of Japan",
+      "country": "Japan",
+      "source_type": "government",
+      "citations": 1,
+      "latest": "2018-04-23",
+      "doc_url": "https://www.env.go.jp/content/900449456.pdf"
+    },
+    {
+      "org": "Government of Iran",
+      "country": "Iran",
+      "source_type": "government",
+      "citations": 1,
+      "latest": "2021-02-16",
+      "doc_url": "https://iies.mop.ir/File/ShowFile.aspx?ID=790ea528-0483-4429-a64a-f1da55889a6b"
+    },
+    {
+      "org": "Government of India",
+      "country": "India",
+      "source_type": "government",
+      "citations": 1,
+      "latest": "2024-09-30",
+      "doc_url": "https://nghm.mnre.gov.in/admin/uploads/resources/173069690523453IRENA_Renewable_energy_and_jobs_2024.pdf"
+    },
+    {
+      "org": "Government of Argentina",
+      "country": "Argentina",
+      "source_type": "government",
+      "citations": 1,
+      "latest": "2021-12-22",
+      "doc_url": "https://www.argentina.gob.ar/sites/default/files/2022/02/2022_book_nuclearlaw.pdf"
+    },
+    {
+      "org": "Funda\u00e7\u00e3o Getulio Vargas",
+      "country": "Brazil",
+      "source_type": "think tank",
+      "citations": 1,
+      "latest": "2024-06-06",
+      "doc_url": "https://hdl.handle.net/10438/35550"
+    },
+    {
+      "org": "Ecologic Institute",
+      "country": "Germany",
+      "source_type": "think tank",
+      "citations": 1,
+      "latest": "2023-06-20",
+      "doc_url": "https://www.ecologic.eu/19263"
+    },
+    {
+      "org": "Ecofiscal",
+      "country": "Canada",
+      "source_type": "think tank",
+      "citations": 1,
+      "latest": "2019-06-12",
+      "doc_url": "https://ecofiscal.ca/2019/06/12/chinas-climate-challenge-part-2/"
+    },
+    {
+      "org": "ESRC Centre for Climate Change Economics and Policy",
+      "country": "UK",
+      "source_type": "think tank",
+      "citations": 1,
+      "latest": "2020-10-30",
+      "doc_url": "https://www.cccep.ac.uk/publication/from-rescue-to-recovery-towards-a-sustainable-transition-for-china-after-the-covid-19-pandemic/"
+    },
+    {
+      "org": "E3G",
+      "country": "UK",
+      "source_type": "think tank",
+      "citations": 1,
+      "latest": "2021-04-01",
+      "doc_url": "https://www.e3g.org/publications/china-s-14th-five-year-plan/"
+    },
+    {
+      "org": "Deutsches Institut f\u00fcr Wirtschaftsforschung (DIW)",
+      "country": "Germany",
+      "source_type": "think tank",
+      "citations": 1,
+      "latest": "2026-01-27",
+      "doc_url": "https://www.diw.de/de/diw_01.c.997094.de/publikationen/diskussionspapiere/2026_2153/non-price_criteria_in_renewable_energy_auctions_and_consequences_for_the_european_solar_pv_industry.html"
+    },
+    {
+      "org": "Deutsche Gesellschaft f\u00fcr Ausw\u00e4rtige Politik (DGAP)",
+      "country": "Germany",
+      "source_type": "think tank",
+      "citations": 1,
+      "latest": "2025-06-25",
+      "doc_url": "https://dgap.org/en/research/publications/advanced-technology-europes-strategic-imperative"
+    },
+    {
+      "org": "Centre for Economic Transition Expertise (CETEX)",
+      "country": "UK",
+      "source_type": "think tank",
+      "citations": 1,
+      "latest": "2025-09-12",
+      "doc_url": "https://cetex.org/publications/seven-lessons-for-indias-climate-finance-taxonomy/"
+    },
+    {
+      "org": "Centre for Economic Policy Research",
+      "country": "UK",
+      "source_type": "think tank",
+      "citations": 1,
+      "latest": "2025-06-18",
+      "doc_url": "https://cepr.org/publications/books-and-reports/economic-consequences-second-trump-administration-preliminary"
+    },
+    {
+      "org": "IPCC",
+      "country": "IGO",
+      "source_type": "igo",
+      "citations": 1,
+      "latest": "2022-03-08",
+      "doc_url": "https://www.ipcc.ch/report/sixth-assessment-report-working-group-3/"
+    },
+    {
+      "org": "Government of Switzerland",
+      "country": "Switzerland",
+      "source_type": "government",
+      "citations": 1,
+      "latest": "2020-04-07",
+      "doc_url": "https://www.bafu.admin.ch/dam/bafu/de/dokumente/daten-karten/externe-studien-berichte/BAFU-IKTU_Schlussbericht_v1.1_2020-04.pdf.download.pdf/BAFU-IKTU_Schlussbericht_v1.1_2020-04.pdf"
+    },
+    {
+      "org": "House Committees",
+      "country": "USA",
+      "source_type": "government",
+      "citations": 1,
+      "latest": "2021-07-16",
+      "doc_url": "https://www.congress.gov/event/117th-congress/house-event/113923"
+    },
+    {
+      "org": "Potsdam-Institut f\u00fcr Klimafolgenforschung (PIK)",
+      "country": "Germany",
+      "source_type": "think tank",
+      "citations": 1,
+      "latest": "2024-06-03",
+      "doc_url": "https://publications.pik-potsdam.de/pubman/item/item_32030_2"
+    },
+    {
+      "org": "OECD",
+      "country": "IGO",
+      "source_type": "igo",
+      "citations": 1,
+      "latest": "2024-10-23",
+      "doc_url": "https://dx.doi.org/https://doi.org/10.1787/2b90fa2c-en"
+    },
+    {
+      "org": "Middle East Institute (MEI)",
+      "country": "USA",
+      "source_type": "think tank",
+      "citations": 1,
+      "latest": "2021-10-19",
+      "doc_url": "https://www.mei.edu/publications/sustainable-momentum-china-and-mideast-solar-market"
+    },
+    {
+      "org": "Mekong River Commission",
+      "country": "IGO",
+      "source_type": "igo",
+      "citations": 1,
+      "latest": "2019-10-22",
+      "doc_url": "http://www.mrcmekong.org/assets/Publications/SOBR-v8_Final-for-web.pdf"
+    },
+    {
+      "org": "International Science Council",
+      "country": "France",
+      "source_type": "think tank",
+      "citations": 1,
+      "latest": "2021-01-26",
+      "doc_url": "https://council.science/publications/rethinking-energy-solutions/"
+    },
+    {
+      "org": "Institut Montaigne",
+      "country": "France",
+      "source_type": "think tank",
+      "citations": 1,
+      "latest": "2021-07-01",
+      "doc_url": "https://www.institutmontaigne.org/publications/china-trends-9-une-chine-decarbonee-est-elle-possible"
+    },
+    {
+      "org": "Institute for Global Environment Strategies",
+      "country": "Japan",
+      "source_type": "think tank",
+      "citations": 1,
+      "latest": "2024-05-01",
+      "doc_url": "https://www.iges.or.jp/en/pub/industrial-policy-japan/en"
+    },
+    {
+      "org": "Institute of International and European Affairs",
+      "country": "Ireland",
+      "source_type": "think tank",
+      "citations": 1,
+      "latest": "2020-10-20",
+      "doc_url": "https://www.iiea.com/publication/course-correction-china-is-going-carbon-neutral/"
+    },
+    {
+      "org": "UK Parliament Select Committee Publications",
+      "country": "UK",
+      "source_type": "government",
+      "citations": 1,
+      "latest": "2024-05-08",
+      "doc_url": "https://committees.parliament.uk/writtenevidence/129843/pdf/"
+    },
+    {
+      "org": "The Scottish Government",
+      "country": "UK",
+      "source_type": "government",
+      "citations": 1,
+      "latest": "2026-01-27",
+      "doc_url": "https://www.gov.scot/publications/meeting-scotlands-workforce-needs-transition-net-zero-role-migration-impact-demographic-challenges/"
+    },
+    {
+      "org": "The Global Commission on the Economy and Climate",
+      "country": "IGO",
+      "source_type": "igo",
+      "citations": 1,
+      "latest": "2018-02-02",
+      "doc_url": "https://newclimateeconomy.report/workingpapers/wp-content/uploads/sites/5/2018/02/Building-Thriving-Low-Carbon-Cities-An-Overview-Full-Paper-1.pdf"
+    },
+    {
+      "org": "REN21",
+      "country": "France",
+      "source_type": "think tank",
+      "citations": 1,
+      "latest": "2021-06-14",
+      "doc_url": "https://www.ren21.net/wp-content/uploads/2019/05/GSR2021_Full_Report.pdf"
+    },
+    {
+      "org": "VTI",
+      "country": "Sweden",
+      "source_type": "government",
+      "citations": 1,
+      "latest": "2023-01-09",
+      "doc_url": "https://vti.diva-portal.org/smash/record.jsf?pid=diva2%3A1725636"
+    },
+    {
+      "org": "United Nations Environment Programme",
+      "country": "IGO",
+      "source_type": "igo",
+      "citations": 1,
+      "latest": "2024-10-21",
+      "doc_url": "https://wedocs.unep.org/handle/20.500.11822/46404"
+    },
+    {
+      "org": "Wuppertal Institut",
+      "country": "Germany",
+      "source_type": "think tank",
+      "citations": 1,
+      "latest": "2025-06-04",
+      "doc_url": "https://epub.wupperinst.org/frontdoor/index/index/searchtype/all/docId/8869"
+    },
+    {
+      "org": "ifo Institut",
+      "country": "Germany",
+      "source_type": "think tank",
+      "citations": 1,
+      "latest": "2024-06-19",
+      "doc_url": "https://www.cesifo.org/en/publications/2024/working-paper/sequencing-carbon-dioxide-removal-eu-ets"
+    }
+  ],
+  "topics": [
+    {
+      "topic": "Economy",
+      "count": 70
+    },
+    {
+      "topic": "Renewable energy",
+      "count": 62
+    },
+    {
+      "topic": "Climate change mitigation",
+      "count": 56
+    },
+    {
+      "topic": "Low-carbon economy",
+      "count": 48
+    },
+    {
+      "topic": "Climate change",
+      "count": 48
+    },
+    {
+      "topic": "Greenhouse gas emissions",
+      "count": 42
+    },
+    {
+      "topic": "Energy",
+      "count": 39
+    },
+    {
+      "topic": "Nature",
+      "count": 39
+    },
+    {
+      "topic": "Greenhouse gas",
+      "count": 38
+    },
+    {
+      "topic": "Sustainable energy",
+      "count": 37
+    },
+    {
+      "topic": "Infrastructure",
+      "count": 35
+    },
+    {
+      "topic": "Sustainability",
+      "count": 35
+    },
+    {
+      "topic": "Photovoltaics",
+      "count": 35
+    },
+    {
+      "topic": "Natural environment",
+      "count": 35
+    },
+    {
+      "topic": "Economic growth",
+      "count": 32
+    }
+  ],
+  "timeline": [
+    {
+      "year": "2013",
+      "citations": 1
+    },
+    {
+      "year": "2014",
+      "citations": 1
+    },
+    {
+      "year": "2017",
+      "citations": 4
+    },
+    {
+      "year": "2018",
+      "citations": 3
+    },
+    {
+      "year": "2019",
+      "citations": 3
+    },
+    {
+      "year": "2020",
+      "citations": 5
+    },
+    {
+      "year": "2021",
+      "citations": 16
+    },
+    {
+      "year": "2022",
+      "citations": 9
+    },
+    {
+      "year": "2023",
+      "citations": 15
+    },
+    {
+      "year": "2024",
+      "citations": 16
+    },
+    {
+      "year": "2025",
+      "citations": 10
+    },
+    {
+      "year": "2026",
+      "citations": 3
+    }
+  ],
+  "countries": [
+    {
+      "country": "IGO",
+      "citations": 27
+    },
+    {
+      "country": "USA",
+      "citations": 12
+    },
+    {
+      "country": "UK",
+      "citations": 10
+    },
+    {
+      "country": "Germany",
+      "citations": 7
+    },
+    {
+      "country": "France",
+      "citations": 5
+    },
+    {
+      "country": "South Korea",
+      "citations": 4
+    },
+    {
+      "country": "Sweden",
+      "citations": 3
+    },
+    {
+      "country": "EU",
+      "citations": 3
+    },
+    {
+      "country": "Netherlands",
+      "citations": 2
+    },
+    {
+      "country": "Japan",
+      "citations": 2
+    },
+    {
+      "country": "Canada",
+      "citations": 2
+    },
+    {
+      "country": "Austria",
+      "citations": 2
+    }
+  ],
+  "types": [
+    {
+      "source_type": "think tank",
+      "citations": 39
+    },
+    {
+      "source_type": "igo",
+      "citations": 27
+    },
+    {
+      "source_type": "government",
+      "citations": 19
+    },
+    {
+      "source_type": "other",
+      "citations": 1
+    }
+  ],
+  "mention_types": [
+    {
+      "type": "Policy citation",
+      "count": 80
+    },
+    {
+      "type": "Name mention",
+      "count": 6
+    }
+  ]
+}</script>
+<script>(function(){
+  // Guard against the host page re-running this script against an
+  // already-built DOM (some embedded preview panes re-execute inline
+  // scripts on resize/remount) — without this, every chart gets drawn
+  // again on top of itself.
+  if (window.__policyImpactRegisterInit) return;
+  window.__policyImpactRegisterInit = true;
+
+  const DATA = JSON.parse(document.getElementById('bundle-data').textContent);
+
+  const COLORS = { gold: '#D4A24C', teal: '#3FA092', brick: '#C1654A', muted: '#93A0C2' };
+  const TYPE_COLOR = { 'think tank': 'gold', igo: 'teal', government: 'brick', other: 'muted2' };
+  const TYPE_HEX   = { 'think tank': COLORS.gold, igo: COLORS.teal, government: COLORS.brick, other: COLORS.muted };
+
+  function truncate(s, n){
+    if (!s) return s;
+    return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s;
+  }
+
+  // ---------------- Plotly base layout ----------------
+  const baseLayout = (extra) => Object.assign({
+    paper_bgcolor: '#1B2747',
+    plot_bgcolor: '#1B2747',
+    showlegend: false,
+    font: { family: 'Inter, sans-serif', color: '#F4F0E6', size: 12 },
+    margin: { l: 10, r: 14, t: 10, b: 30 },
+    xaxis: { title: '', gridcolor: 'rgba(255,255,255,0.07)', zerolinecolor: 'rgba(255,255,255,0.07)', automargin: true },
+    yaxis: { title: '', gridcolor: 'rgba(255,255,255,0.07)', zerolinecolor: 'rgba(255,255,255,0.07)', automargin: true },
+  }, extra);
+  const plotConfig = { displayModeBar: false, responsive: true };
+
+  // Always clear any prior render on this div before drawing — cheap
+  // insurance against double-initialization on top of the guard above.
+  function drawPlot(id, traces, layoutExtra){
+    const el = document.getElementById(id);
+    if (!el) return;
+    if (el.dataset.plotted) { try { Plotly.purge(el); } catch(e){} }
+    Plotly.newPlot(id, traces, baseLayout(layoutExtra), plotConfig);
+    el.dataset.plotted = '1';
+  }
+
+  // ---------------- Masthead meta ----------------
+  document.getElementById('meta-block').innerHTML =
+    `<div><b>${DATA.summary.total}</b> mentions logged</div>
+     <div>${DATA.summary.orgs} organizations · ${DATA.summary.countries} countries/IGOs</div>`;
+
+  // ---------------- Page definitions ----------------
+  const PAGES = [
+    { id: 'overview', label: 'Overview' },
+    { id: 'papers', label: 'By Paper' },
+    { id: 'orgs', label: 'By Organization' },
+    { id: 'topics', label: 'Topics & Reach' },
+  ];
+
+  const tabsEl = document.getElementById('tabs');
+  const pagesEl = document.getElementById('pages');
+  tabsEl.innerHTML = '';
+  pagesEl.innerHTML = '';
+
+  PAGES.forEach((p, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'tab-btn' + (i === 0 ? ' active' : '');
+    btn.textContent = p.label;
+    btn.dataset.target = p.id;
+    btn.addEventListener('click', () => showPage(p.id));
+    tabsEl.appendChild(btn);
+
+    const sec = document.createElement('section');
+    sec.className = 'page' + (i === 0 ? ' active' : '');
+    sec.id = 'page-' + p.id;
+    pagesEl.appendChild(sec);
+  });
+
+  const rendered = {};
+  function showPage(id){
+    document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.target === id));
+    document.querySelectorAll('.page').forEach(s => s.classList.toggle('active', s.id === 'page-' + id));
+    if (!rendered[id]){ BUILDERS[id](); rendered[id] = true; }
+    else { window.dispatchEvent(new Event('resize')); }
+  }
+
+  // ====================================================================
+  // OVERVIEW
+  // ====================================================================
+  function buildOverview(){
+    const root = document.getElementById('page-overview');
+
+    const vb = (label, value, cls, icon) => `
+      <div class="card vbox ${cls}">
+        <div class="vlabel">${label}</div>
+        <div class="vvalue">${value}</div>
+        <div class="icon">${icon}</div>
+      </div>`;
+
+    root.innerHTML = `
+      <div class="row cols-4">
+        ${vb('Policy Mentions', DATA.summary.total, 'gold', '📄')}
+        ${vb('Citing Organizations', DATA.summary.orgs, 'teal', '🏛')}
+        ${vb('Countries & IGOs Reached', DATA.summary.countries, 'brick', '🌐')}
+        ${vb('Papers With Policy Reach', DATA.summary.papers, 'muted2', '📚')}
+      </div>
+      <div class="row cols-2-38-62">
+        <div class="card">
+          <div class="card-head">Mentions by source type</div>
+          <div class="card-body"><div id="chart-type" class="plot"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-head">Mentions by country / IGO</div>
+          <div class="card-body"><div id="chart-country" class="plot"></div></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card">
+          <div class="card-head">Top citing organizations</div>
+          <div class="card-body"><div id="chart-top-orgs" class="plot"></div></div>
+        </div>
+      </div>`;
+
+    drawPlot('chart-type',
+      [{
+        type: 'pie', hole: 0.55,
+        labels: DATA.types.map(t => t.source_type),
+        values: DATA.types.map(t => t.citations),
+        marker: { colors: DATA.types.map(t => TYPE_HEX[t.source_type] || COLORS.muted), line: { color: '#1B2747', width: 2 } },
+        textinfo: 'label+value', textposition: 'outside', textfont: { size: 11 },
+        showlegend: false,
+      }],
+      { height: 300, margin: { l: 30, r: 30, t: 30, b: 30 } });
+
+    const ctop = DATA.countries.slice(0, 12).slice().reverse();
+    drawPlot('chart-country',
+      [{ type: 'bar', orientation: 'h',
+         x: ctop.map(c => c.citations), y: ctop.map(c => truncate(c.country, 22)),
+         hovertext: ctop.map(c => c.country), hoverinfo: 'text+x',
+         marker: { color: COLORS.gold } }],
+      { height: 300 });
+
+    const otop = DATA.orgs.slice(0, 12).slice().reverse();
+    const groups = {};
+    otop.forEach(o => { (groups[o.source_type] = groups[o.source_type] || []).push(o); });
+    const traces = Object.keys(groups).map(st => ({
+      type: 'bar', orientation: 'h', name: st,
+      x: otop.map(o => o.source_type === st ? o.citations : 0),
+      y: otop.map(o => truncate(o.org, 30)),
+      hovertext: otop.map(o => o.org), hoverinfo: 'text+x',
+      marker: { color: TYPE_HEX[st] || COLORS.muted },
+    }));
+    drawPlot('chart-top-orgs', traces,
+      { height: 360, barmode: 'stack', showlegend: true,
+        legend: { orientation: 'h', y: 1.1, font: { size: 11 } },
+        margin: { l: 10, r: 14, t: 36, b: 30 } });
+  }
+
+  // ====================================================================
+  // BY PAPER
+  // ====================================================================
+  function buildPapers(){
+    const root = document.getElementById('page-papers');
+    root.innerHTML = `
+      <div class="row">
+        <div class="card">
+          <div class="card-head">Citations per paper</div>
+          <div class="card-body"><div id="chart-papers" class="plot"></div></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card">
+          <div class="card-head">Paper registry — ranked by policy citations</div>
+          <div class="card-body tight scroll-table"><table id="table-papers"></table></div>
+        </div>
+      </div>`;
+
+    const tp = DATA.top_papers.slice().reverse();
+    drawPlot('chart-papers',
+      [{ type: 'bar', orientation: 'h',
+         x: tp.map(p => p.citations), y: tp.map(p => truncate(p.paper, 60)),
+         hovertext: tp.map(p => p.paper), hoverinfo: 'text+x',
+         marker: { color: COLORS.gold } }],
+      { height: 460, margin: { l: 10, r: 14, t: 10, b: 30 } });
+
+    const rows = DATA.top_papers.map((p, i) => `
+      <tr>
+        <td class="rank">${String(i + 1).padStart(2, '0')}</td>
+        <td>${p.paper}</td>
+        <td class="mono">${p.doi ? `<a href="https://doi.org/${p.doi}" target="_blank" rel="noopener">${p.doi}</a>` : '—'}</td>
+        <td class="num">${p.citations}</td>
+      </tr>`).join('');
+    document.getElementById('table-papers').innerHTML = `
+      <thead><tr><th>No.</th><th>Cited paper</th><th>DOI</th><th>Citations</th></tr></thead>
+      <tbody>${rows}</tbody>`;
+  }
+
+  // ====================================================================
+  // BY ORGANIZATION
+  // ====================================================================
+  function buildOrgs(){
+    const root = document.getElementById('page-orgs');
+    root.innerHTML = `
+      <div class="row cols-2-55-45">
+        <div class="card">
+          <div class="card-head">Reach by organization (top 15)</div>
+          <div class="card-body"><div id="chart-orgs" class="plot"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-head">Organization type × citations</div>
+          <div class="card-body"><div id="chart-treemap" class="plot"></div></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card">
+          <div class="card-head">Organization registry</div>
+          <div class="legend">
+            <span><span class="seal gold"></span>think tank</span>
+            <span><span class="seal teal"></span>igo</span>
+            <span><span class="seal brick"></span>government</span>
+            <span><span class="seal muted2"></span>other</span>
+          </div>
+          <div class="card-body tight scroll-table"><table id="table-orgs"></table></div>
+        </div>
+      </div>`;
+
+    const o15 = DATA.orgs.slice(0, 15).slice().reverse();
+    const groups = {};
+    o15.forEach(o => { (groups[o.source_type] = groups[o.source_type] || []).push(o); });
+    const traces = Object.keys(groups).map(st => ({
+      type: 'bar', orientation: 'h', name: st,
+      x: o15.map(o => o.source_type === st ? o.citations : 0),
+      y: o15.map(o => truncate(o.org, 30)),
+      hovertext: o15.map(o => o.org), hoverinfo: 'text+x',
+      marker: { color: TYPE_HEX[st] || COLORS.muted },
+    }));
+    drawPlot('chart-orgs', traces,
+      { height: 440, barmode: 'stack', showlegend: false, margin: { l: 10, r: 14, t: 10, b: 30 } });
+
+    const typeOrder = [...new Set(DATA.orgs.map(o => o.source_type))];
+    const typeTotals = {};
+    DATA.orgs.forEach(o => { typeTotals[o.source_type] = (typeTotals[o.source_type] || 0) + o.citations; });
+    const grandTotal = Object.values(typeTotals).reduce((a, b) => a + b, 0);
+    drawPlot('chart-treemap',
+      [{
+        type: 'treemap',
+        ids:     ['root', ...typeOrder, ...DATA.orgs.map((o, i) => `org-${i}`)],
+        labels:  ['All organizations', ...typeOrder, ...DATA.orgs.map(o => truncate(o.org, 24))],
+        parents: ['', ...typeOrder.map(() => 'root'), ...DATA.orgs.map(o => o.source_type)],
+        values:  [grandTotal, ...typeOrder.map(t => typeTotals[t]), ...DATA.orgs.map(o => o.citations)],
+        hovertext: ['All organizations', ...typeOrder, ...DATA.orgs.map(o => o.org)],
+        hoverinfo: 'text+value',
+        marker: { colors: ['rgba(0,0,0,0)', ...typeOrder.map(t => TYPE_HEX[t] || COLORS.muted), ...DATA.orgs.map(o => TYPE_HEX[o.source_type] || COLORS.muted)] },
+        textfont: { size: 11 },
+        branchvalues: 'total',
+      }],
+      { height: 440, margin: { l: 4, r: 4, t: 10, b: 4 } });
+
+    const rows = DATA.orgs.map(o => `
+      <tr>
+        <td><span class="seal ${TYPE_COLOR[o.source_type] || 'muted2'}"></span>${o.org}</td>
+        <td>${o.country}</td>
+        <td class="mono">${o.source_type}</td>
+        <td class="num">${o.citations}</td>
+        <td class="mono">${o.latest || '—'}</td>
+        <td>${o.doc_url ? `<a href="${o.doc_url}" target="_blank" rel="noopener">link</a>` : '—'}</td>
+      </tr>`).join('');
+    document.getElementById('table-orgs').innerHTML = `
+      <thead><tr><th>Organization</th><th>Country</th><th>Type</th><th>Citations</th><th>Most recent</th><th>Document</th></tr></thead>
+      <tbody>${rows}</tbody>`;
+  }
+
+  // ====================================================================
+  // TOPICS & REACH
+  // ====================================================================
+  function buildTopics(){
+    const root = document.getElementById('page-topics');
+    root.innerHTML = `
+      <div class="row cols-2-55-45">
+        <div class="card">
+          <div class="card-head">Most-linked topics</div>
+          <div class="card-body"><div id="chart-topics" class="plot"></div></div>
+        </div>
+        <div class="card">
+          <div class="card-head">Policy mentions over time (by year)</div>
+          <div class="card-body"><div id="chart-timeline" class="plot"></div></div>
+        </div>
+      </div>
+      <div class="row">
+        <div class="card">
+          <div class="card-head">Mention type — policy citation vs. name mention</div>
+          <div class="card-body"><div id="chart-mtype" class="plot"></div></div>
+        </div>
+      </div>`;
+
+    const tt = DATA.topics.slice().reverse();
+    drawPlot('chart-topics',
+      [{ type: 'bar', orientation: 'h',
+         x: tt.map(t => t.count), y: tt.map(t => truncate(t.topic, 30)),
+         hovertext: tt.map(t => t.topic), hoverinfo: 'text+x',
+         marker: { color: COLORS.teal } }],
+      { height: 380 });
+
+    drawPlot('chart-timeline',
+      [{ type: 'scatter', mode: 'lines', fill: 'tozeroy',
+         x: DATA.timeline.map(t => t.year), y: DATA.timeline.map(t => t.citations),
+         line: { color: COLORS.gold }, fillcolor: 'rgba(212,162,76,0.18)' }],
+      { height: 380, xaxis: { gridcolor: 'rgba(255,255,255,0.07)', automargin: true } });
+
+    drawPlot('chart-mtype',
+      [{ type: 'bar', orientation: 'h',
+         x: DATA.mention_types.map(t => t.count), y: DATA.mention_types.map(t => t.type),
+         marker: { color: DATA.mention_types.map(t => t.type === 'Policy citation' ? COLORS.gold : COLORS.muted) } }],
+      { height: 180 });
+  }
+
+  const BUILDERS = { overview: buildOverview, papers: buildPapers, orgs: buildOrgs, topics: buildTopics };
+
+  // Render the first page on load
+  BUILDERS.overview();
+  rendered.overview = true;
+
+  window.addEventListener('resize', () => {
+    document.querySelectorAll('.plot').forEach(el => { if (el.id && el.dataset.plotted) Plotly.Plots.resize(el); });
+  });
+})();
+</script>
+</body>
+</html>

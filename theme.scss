@@ -1,0 +1,113 @@
+/*-- scss:defaults --*/
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+
+// Registry palette
+$ink:        #121A30;   // primary background — deep ledger-navy
+$ink-card:   #1B2747;   // card / surface
+$ink-card-2: #223057;   // slightly raised surface (headers inside cards)
+$hairline:   rgba(212, 162, 76, 0.22);
+$gold:       #D4A24C;   // primary accent — wax-seal gold
+$teal:       #3FA092;   // secondary accent — ledger teal
+$brick:      #C1654A;   // tertiary accent — stamped red
+$muted:      #93A0C2;   // muted ink-blue for labels
+$paper:      #F4F0E6;   // text on dark
+
+$primary:    $gold;
+$secondary:  $teal;
+$success:    $teal;
+$info:       $muted;
+$warning:    $gold;
+$danger:     $brick;
+
+$body-bg:    $ink;
+$body-color: $paper;
+
+$font-family-sans-serif: 'Inter', -apple-system, sans-serif;
+$font-family-monospace: 'IBM Plex Mono', monospace;
+
+/*-- scss:rules --*/
+$display: 'Fraunces', Georgia, serif;
+
+.quarto-dashboard .navbar,
+.dashboard-title-block {
+  background-color: $ink !important;
+  border-bottom: 1px solid $hairline;
+}
+
+.navbar-title, .navbar-brand {
+  font-family: $display;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  color: $paper !important;
+}
+
+.navbar-nav .nav-link {
+  font-family: $font-family-monospace;
+  font-size: 0.78rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: $muted !important;
+}
+.navbar-nav .nav-link.active {
+  color: $gold !important;
+  border-bottom: 1px solid $gold;
+}
+
+body, .dashboard-content {
+  background-color: $ink;
+}
+
+.card, .quarto-dashboard .card {
+  background-color: $ink-card;
+  border: 1px solid $hairline;
+  border-radius: 3px;
+  box-shadow: none;
+}
+
+.card-header {
+  background-color: $ink-card !important;
+  border-bottom: 1px solid $hairline;
+  font-family: $font-family-monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: $muted !important;
+  padding-top: 0.7rem;
+  padding-bottom: 0.6rem;
+}
+
+.valuebox {
+  border: 1px solid $hairline;
+  border-radius: 3px;
+}
+.valuebox-title {
+  font-family: $font-family-monospace !important;
+  font-size: 0.72rem !important;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+.valuebox-value {
+  font-family: $display !important;
+  font-weight: 600 !important;
+  font-size: 2.1rem !important;
+}
+
+table {
+  font-size: 0.86rem;
+}
+thead th {
+  font-family: $font-family-monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: $muted;
+  border-bottom: 1px solid $hairline !important;
+}
+tbody tr td {
+  border-bottom: 1px solid rgba(255,255,255,0.06) !important;
+}
+
+h1, h2, h3 { font-family: $display; }
+
+::selection { background: $gold; color: $ink; }
