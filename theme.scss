@@ -76,21 +76,45 @@ body, .dashboard-content {
   padding-bottom: 0.6rem;
 }
 
-.valuebox {
-  border: 1px solid $hairline;
+.bslib-value-box {
+  border: 1px solid $hairline !important;
   border-radius: 3px;
+  &.default {
+    --bslib-value-box-bg-default: #{$ink-card};
+    --bslib-value-box-border-color-default: #{$hairline};
+    color: #{$paper};
+  }
 }
-.valuebox-title {
+.value-box-title {
   font-family: $font-family-monospace !important;
   font-size: 0.72rem !important;
   letter-spacing: 0.07em;
   text-transform: uppercase;
   opacity: 0.85;
+  color: $muted;
 }
-.valuebox-value {
+.value-box-value {
   font-family: $display !important;
   font-weight: 600 !important;
   font-size: 2.1rem !important;
+  color: $paper;
+}
+.value-box-showcase {
+  color: $gold;
+  opacity: 0.9;
+}
+// The four overview value boxes are the only .bslib-value-box elements in
+// the dashboard, so position-based selectors are safe here.
+.bslib-value-box:nth-of-type(1) { border-left: 3px solid $gold !important; }
+.bslib-value-box:nth-of-type(2) { border-left: 3px solid $teal !important; }
+.bslib-value-box:nth-of-type(3) { border-left: 3px solid $brick !important; }
+.bslib-value-box:nth-of-type(4) { border-left: 3px solid $muted !important; }
+
+.card img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
 }
 
 table {

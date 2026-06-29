@@ -1,0 +1,402 @@
+---
+title: "Policy Impact Register"
+subtitle: "Where the research is landing — tracked by paper, citing organization, and geographic reach."
+format:
+  dashboard:
+    theme: [cosmo, theme.scss]
+    orientation: rows
+    nav-buttons: []
+execute:
+  echo: false
+  warning: false
+  message: false
+jupyter: python3
+---
+
+```{python}
+#| include: false
+
+import pandas as pd
+import plotly.express as px
+import plotly.io as pio
+import plotly.graph_objects as go
+
+# ROOT CAUSE of the duplicate-chart bug (confirmed by inspecting the actual
+# rendered dashboard.html): Quarto's Jupyter engine sets
+# ast_node_interactivity="all" so every top-level expression in a cell
+# auto-displays (mirroring R's print-everything semantics) — not just the
+# final one. Plotly's fig.update_traces()/update_layout() both return the
+# Figure itself, and a bare Figure object has its own rich repr that
+# renders as a full interactive widget. So a chunk like:
+#     fig.update_traces(...)   # <- bare expression, auto-displayed too!
+#     fig.update_layout(...)   # <- same
+#     show_fig(fig)            # <- the one output we actually want
+# was producing 2-3 outputs per cell, not 1. A trailing `;` does NOT fix
+# this — IPython's semicolon-suppression only applies to a cell's FINAL
+# statement, not intermediate ones. The actual fix: capture the return
+# value via assignment (`fig = fig.update_layout(...)`) so it's an Assign
+# node, not a bare Expr node — assignments are never auto-displayed.
+# Every update_traces/update_layout call below follows that pattern.
+from IPython.display import Image
+# Charts render to static PNG (via Plotly's kaleido export) rather than
+# interactive widgets — this also sidesteps the auto-display issue above
+# for the final, intended output. Static export requires Chrome; if you
+# don't already have it, run this once: `plotly_get_chrome`
+def show_fig(fig, width=900, height=None, **kwargs):
+    h = height or fig.layout.height or 400
+    path = f"/tmp/_fig_{abs(hash((width, h, str(fig.layout.title))))}_{id(fig)}.png"
+    fig.write_image(path, width=width, height=h, scale=2)
+    return Image(path)
+import os, time, requests
+
+# ---- 1. LOAD ------------------------------------------------------------
+# Re-export this CSV from Policy Profiles / Overton and drop it in the
+# same folder as this file to refresh the dashboard, then re-run
+# `quarto render dashboard.qmd`.
+DATA_PATH = "policy-impact-export-2026-06-18.csv"
+
+# ---- 1b. OPTIONAL — live refresh via the Overton API --------------------
+# Sage Policy Profiles itself has no public API — it's a free, browser
+# tool that assembles your export client-side, which is why the download
+# you get from it is a session-local `blob:` URL rather than a normal
+# link. But it's built on Overton, and Overton DOES have a documented
+# REST API for accounts with API access enabled (institutional
+# subscribers — see https://app.overton.io/swagger.php). If you have an
+# Overton API key, this block will pull live data straight from there
+# instead of the static CSV.
+#
+# 1. Get your key: in the Overton app, Export -> "Generate API call".
+# 2. Set it as an environment variable (never hardcode it in this file):
+#       export OVERTON_API_KEY="your-key-here"
+# 3. List every DOI of your own papers you want tracked below. These
+#    five are just the ones already present in the CSV, as a starting
+#    point — add any of your other papers too.
+MY_DOIS = [
+    "10.1038/s41586-022-05316-6",
+    "10.1016/j.oneear.2020.07.012",
+    "10.1016/j.enpol.2013.09.021",
+    "10.1038/s41467-020-16184-x",
+    "10.1038/s43017-021-00244-x",
+    # ...add the rest of your DOIs here
+]
+OVERTON_API_KEY = os.environ.get("OVERTON_API_KEY")
+
+def fetch_overton_citations(dois, api_key, per_doi_pause=1.0):
+    """Pull every policy document citing each DOI in `dois` via Overton's
+    documented `plain_dois_cited` endpoint, paginating with next_page_url.
+    Returns a DataFrame shaped like the Policy Profiles CSV export.
+
+    NOTE: the result schema below covers the fields Overton's docs show
+    explicitly (title, translated_title, source.title/country/type,
+    policy_document_id). Fields like the publication date, document URL,
+    and topics weren't shown in full in the public docs snippet — print
+    one raw `r` below to confirm the exact keys for your account, and
+    adjust the `.get(...)` calls if the names differ.
+    """
+    rows = []
+    for doi in dois:
+        url = "https://app.overton.io/documents.php"
+        params = {"plain_dois_cited": doi, "format": "json", "api_key": api_key}
+        while True:
+            resp = requests.get(url, params=params, timeout=30)
+            if resp.status_code == 429:
+                time.sleep(2)
+                continue
+            resp.raise_for_status()
+            payload = resp.json()
+            for r in payload.get("results", []):
+                src = r.get("source", {})
+                rows.append({
+                    "Type": "Policy citation",
+                    "Policy Document ID": r.get("policy_document_id"),
+                    "Title": r.get("title"),
+                    "Translated title": r.get("translated_title"),
+                    "Source title": src.get("title"),
+                    "Source country": src.get("country"),
+                    "Source type": src.get("type"),
+                    "Source sub-type": None,
+                    "Published on": r.get("date") or r.get("published_on"),
+                    "Cited research titles": r.get("cited_title"),
+                    "Cited research DOIs": doi,
+                    "Topics": r.get("topics"),
+                    "Document URL": r.get("document_url"),
+                    "Text": "",
+                })
+            next_url = payload.get("query", {}).get("next_page_url")
+            if not next_url:
+                break
+            url, params = next_url, {}
+            time.sleep(per_doi_pause)
+    return pd.DataFrame(rows)
+
+df = None
+if OVERTON_API_KEY:
+    try:
+        df = fetch_overton_citations(MY_DOIS, OVERTON_API_KEY)
+        if df.empty:
+            df = None
+    except Exception as e:
+        print(f"Overton API fetch failed ({e}); falling back to the CSV export.")
+        df = None
+
+if df is None:
+    df = pd.read_csv(DATA_PATH, encoding="utf-8-sig")
+
+df["Published on"] = pd.to_datetime(df["Published on"], errors="coerce")
+
+GOLD, TEAL, BRICK, MUTED = "#D4A24C", "#3FA092", "#C1654A", "#93A0C2"
+INK, CARD = "#121A30", "#1B2747"
+PALETTE = [GOLD, TEAL, BRICK, MUTED, "#7C8DB5", "#E6C27A"]
+
+pio.templates["registry"] = go.layout.Template(
+    layout=go.Layout(
+        paper_bgcolor=CARD, plot_bgcolor=CARD,
+        font=dict(family="Inter, sans-serif", color="#F4F0E6", size=12),
+        colorway=PALETTE,
+        xaxis=dict(gridcolor="rgba(255,255,255,0.07)", zerolinecolor="rgba(255,255,255,0.07)", automargin=True),
+        yaxis=dict(gridcolor="rgba(255,255,255,0.07)", zerolinecolor="rgba(255,255,255,0.07)", automargin=True),
+        margin=dict(l=10, r=10, t=30, b=10),
+    )
+)
+pio.templates.default = "registry"
+
+# ---- 2. CLEAN / EXPLODE -------------------------------------------------
+def split_field(s):
+    if pd.isna(s):
+        return []
+    return [x.strip() for x in s.split("，") if x.strip()]
+
+# Cited papers: the export uses a full-width comma to separate multiple
+# papers in one cell, but some single titles also contain a literal comma
+# (re-encoded the same way) — so only split when the DOI list confirms
+# there's more than one paper in that cell.
+paper_rows = []
+for _, r in df.iterrows():
+    dois = split_field(r["Cited research DOIs"])
+    traw = r["Cited research titles"]
+    if pd.isna(traw):
+        continue
+    titles = [traw.replace("  ，", ",").strip()] if len(dois) <= 1 else split_field(traw)
+    for i, t in enumerate(titles):
+        doi = dois[i] if i < len(dois) else (dois[0] if len(dois) == 1 else None)
+        paper_rows.append({"paper": t, "doi": doi})
+papers_df = pd.DataFrame(paper_rows)
+top_papers = (
+    papers_df.groupby("paper")
+    .agg(citations=("paper", "count"), doi=("doi", "first"))
+    .reset_index()
+    .sort_values("citations", ascending=False)
+    .reset_index(drop=True)
+)
+
+orgs_df = (
+    df.groupby(["Source title", "Source country", "Source type"])
+    .agg(citations=("Source title", "count"), latest=("Published on", "max"),
+         doc_url=("Document URL", "first"))
+    .reset_index()
+    .rename(columns={"Source title": "org", "Source country": "country", "Source type": "source_type"})
+    .sort_values("citations", ascending=False)
+    .reset_index(drop=True)
+)
+
+all_topics = []
+for s in df["Topics"].dropna():
+    all_topics.extend(split_field(s))
+topics_s = pd.Series(all_topics).value_counts().reset_index()
+topics_s.columns = ["topic", "count"]
+
+tl = df.dropna(subset=["Published on"]).copy()
+tl["year"] = tl["Published on"].dt.year.astype("Int64").astype(str)
+timeline = tl.groupby("year").size().reset_index(name="citations")
+
+country_df = df["Source country"].value_counts().reset_index()
+country_df.columns = ["country", "citations"]
+
+type_df = df["Source type"].value_counts().reset_index()
+type_df.columns = ["source_type", "citations"]
+
+n_total = len(df)
+n_orgs = df["Source title"].nunique()
+n_countries = df["Source country"].nunique()
+n_papers = top_papers.shape[0]
+
+def short(s, n=34):
+    """Truncate long category labels for axis display (full text still
+    shows on hover via Plotly's default hovertemplate on the raw column)."""
+    s = str(s)
+    return s if len(s) <= n else s[: n - 1].rstrip() + "…"
+```
+
+# Overview
+
+## Row {height="16%"}
+
+```{python}
+#| content: valuebox
+#| title: "POLICY MENTIONS"
+dict(icon="file-earmark-text", color="#1B2747", value=int(n_total))
+```
+
+```{python}
+#| content: valuebox
+#| title: "CITING ORGANIZATIONS"
+dict(icon="buildings", color="#1B2747", value=int(n_orgs))
+```
+
+```{python}
+#| content: valuebox
+#| title: "COUNTRIES & IGOs REACHED"
+dict(icon="globe-americas", color="#1B2747", value=int(n_countries))
+```
+
+```{python}
+#| content: valuebox
+#| title: "PAPERS WITH POLICY REACH"
+dict(icon="journal-text", color="#1B2747", value=int(n_papers))
+```
+
+## Row {height="42%"}
+
+### Column {width="38%"}
+
+```{python}
+#| title: "MENTIONS BY SOURCE TYPE"
+fig = px.pie(type_df, names="source_type", values="citations", hole=0.55,
+             color="source_type",
+             color_discrete_map={"think tank": GOLD, "igo": TEAL, "government": BRICK, "other": MUTED})
+fig = fig.update_traces(textfont_size=12, textinfo="label+value")
+fig = fig.update_layout(showlegend=False, height=300)
+show_fig(fig, width=520)
+```
+
+### Column {width="62%"}
+
+```{python}
+#| title: "MENTIONS BY COUNTRY / IGO"
+top_c = country_df.head(12).sort_values("citations").copy()
+top_c["country_disp"] = top_c["country"].apply(short)
+fig = px.bar(top_c, x="citations", y="country_disp", orientation="h", hover_name="country")
+fig = fig.update_traces(marker_color=GOLD)
+fig = fig.update_layout(height=300, yaxis_title="", xaxis_title="")
+show_fig(fig, width=850)
+```
+
+## Row {height="42%"}
+
+```{python}
+#| title: "TOP CITING ORGANIZATIONS"
+top_o = orgs_df.head(12).sort_values("citations").copy()
+top_o["org_disp"] = top_o["org"].apply(short)
+fig = px.bar(top_o, x="citations", y="org_disp", orientation="h", color="source_type", hover_name="org",
+             color_discrete_map={"think tank": GOLD, "igo": TEAL, "government": BRICK, "other": MUTED})
+fig = fig.update_layout(height=320, yaxis_title="", xaxis_title="", legend_title="")
+show_fig(fig, width=1300)
+```
+
+# By Paper
+
+## Row {height="55%"}
+
+```{python}
+#| title: "CITATIONS PER PAPER"
+tp = top_papers.sort_values("citations").copy()
+tp["paper_disp"] = tp["paper"].apply(lambda s: short(s, 55))
+fig = px.bar(tp, x="citations", y="paper_disp", orientation="h", hover_name="paper")
+fig = fig.update_traces(marker_color=GOLD)
+fig = fig.update_layout(height=420, yaxis_title="", xaxis_title="", margin=dict(l=10, r=10, t=20, b=10))
+show_fig(fig, width=1300)
+```
+
+## Row {height="45%"}
+
+```{python}
+#| title: "PAPER REGISTRY — RANKED BY POLICY CITATIONS"
+from IPython.display import HTML
+disp = top_papers.copy()
+disp["DOI"] = disp["doi"].apply(
+    lambda d: f'<a href="https://doi.org/{d}" target="_blank">{d}</a>' if pd.notna(d) else "—"
+)
+disp = disp.rename(columns={"paper": "Cited paper", "citations": "Citations"})[["Cited paper", "DOI", "Citations"]]
+HTML(disp.to_html(index=False, escape=False))
+```
+
+# By Organization
+
+## Row {height="55%"}
+
+### Column {width="55%"}
+
+```{python}
+#| title: "REACH BY ORGANIZATION (TOP 15)"
+to = orgs_df.head(15).sort_values("citations").copy()
+to["org_disp"] = to["org"].apply(short)
+fig = px.bar(to, x="citations", y="org_disp", orientation="h", color="source_type", hover_name="org",
+             color_discrete_map={"think tank": GOLD, "igo": TEAL, "government": BRICK, "other": MUTED})
+fig = fig.update_layout(height=420, yaxis_title="", xaxis_title="", legend_title="")
+show_fig(fig, width=750)
+```
+
+### Column {width="45%"}
+
+```{python}
+#| title: "ORGANIZATION TYPE × CITATIONS"
+fig = px.treemap(orgs_df, path=["source_type", "org"], values="citations",
+                  color="source_type",
+                  color_discrete_map={"think tank": GOLD, "igo": TEAL, "government": BRICK, "other": MUTED})
+fig = fig.update_traces(textfont_size=11)
+fig = fig.update_layout(height=420, margin=dict(l=4, r=4, t=20, b=4))
+show_fig(fig, width=620)
+```
+
+## Row {height="45%"}
+
+```{python}
+#| title: "ORGANIZATION REGISTRY"
+from IPython.display import HTML
+disp = orgs_df.copy()
+disp["Most recent citation"] = disp["latest"].dt.strftime("%Y-%m-%d")
+disp["Document"] = disp["doc_url"].apply(
+    lambda u: f'<a href="{u}" target="_blank">link</a>' if pd.notna(u) else "—"
+)
+disp = disp.rename(columns={"org": "Organization", "country": "Country", "source_type": "Type", "citations": "Citations"})
+disp = disp[["Organization", "Country", "Type", "Citations", "Most recent citation", "Document"]]
+HTML(disp.to_html(index=False, escape=False))
+```
+
+# Topics & Reach
+
+## Row {height="50%"}
+
+### Column {width="55%"}
+
+```{python}
+#| title: "MOST-LINKED TOPICS"
+tt = topics_s.head(15).sort_values("count").copy()
+tt["topic_disp"] = tt["topic"].apply(short)
+fig = px.bar(tt, x="count", y="topic_disp", orientation="h", hover_name="topic")
+fig = fig.update_traces(marker_color=TEAL)
+fig = fig.update_layout(height=380, yaxis_title="", xaxis_title="")
+show_fig(fig, width=750)
+```
+
+### Column {width="45%"}
+
+```{python}
+#| title: "POLICY MENTIONS OVER TIME (BY YEAR)"
+fig = px.area(timeline, x="year", y="citations")
+fig = fig.update_traces(line_color=GOLD, fillcolor="rgba(212,162,76,0.18)")
+fig = fig.update_layout(height=380, xaxis_title="", yaxis_title="")
+show_fig(fig, width=620)
+```
+
+## Row {height="50%"}
+
+```{python}
+#| title: "MENTION TYPE — POLICY CITATION VS. NAME MENTION"
+td = df["Type"].value_counts().reset_index()
+td.columns = ["type", "count"]
+fig = px.bar(td, x="count", y="type", orientation="h", color="type",
+             color_discrete_map={"Policy citation": GOLD, "Name mention": MUTED})
+fig = fig.update_layout(height=220, yaxis_title="", xaxis_title="", showlegend=False)
+show_fig(fig, width=1300)
+```

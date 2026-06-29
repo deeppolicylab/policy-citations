@@ -1,11 +1,9 @@
 ---
 title: "Policy Citations"
-subtitle: "Where our research reaches policy makers"
 format:
-  dashboard:
-    theme: [cosmo, theme.scss]
-    orientation: rows
-    nav-buttons: []
+  html:
+    code-fold: false
+    toc: false
 execute:
   echo: false
   warning: false
@@ -17,9 +15,9 @@ jupyter: python3
 #| include: false
 
 import pandas as pd
-import plotly.express as px
-import plotly.io as pio
-import plotly.graph_objects as go
+import json
+from pathlib import Path
+
 import os, time, requests
 
 # ---- 1. LOAD ------------------------------------------------------------
@@ -117,21 +115,6 @@ if df is None:
 
 df["Published on"] = pd.to_datetime(df["Published on"], errors="coerce")
 
-GOLD, TEAL, BRICK, MUTED = "#D4A24C", "#3FA092", "#C1654A", "#93A0C2"
-INK, CARD = "#121A30", "#1B2747"
-PALETTE = [GOLD, TEAL, BRICK, MUTED, "#7C8DB5", "#E6C27A"]
-
-pio.templates["registry"] = go.layout.Template(
-    layout=go.Layout(
-        paper_bgcolor=CARD, plot_bgcolor=CARD,
-        font=dict(family="Inter, sans-serif", color="#F4F0E6", size=12),
-        colorway=PALETTE,
-        xaxis=dict(gridcolor="rgba(255,255,255,0.07)", zerolinecolor="rgba(255,255,255,0.07)", automargin=True),
-        yaxis=dict(gridcolor="rgba(255,255,255,0.07)", zerolinecolor="rgba(255,255,255,0.07)", automargin=True),
-        margin=dict(l=10, r=10, t=30, b=10),
-    )
-)
-pio.templates.default = "registry"
 
 # ---- 2. CLEAN / EXPLODE -------------------------------------------------
 def split_field(s):
@@ -198,178 +181,41 @@ def short(s, n=34):
     shows on hover via Plotly's default hovertemplate on the raw column)."""
     s = str(s)
     return s if len(s) <= n else s[: n - 1].rstrip() + "…"
-```
 
-# Overview
-
-## Row {height="16%"}
-
-```{python}
-#| content: valuebox
-#| title: "POLICY MENTIONS"
-dict(icon="file-earmark-text", color="primary", value=int(n_total))
-```
-
-```{python}
-#| content: valuebox
-#| title: "CITING ORGANIZATIONS"
-dict(icon="buildings", color="info", value=int(n_orgs))
-```
-
-```{python}
-#| content: valuebox
-#| title: "COUNTRIES & IGOs REACHED"
-dict(icon="globe-americas", color="success", value=int(n_countries))
-```
-
-```{python}
-#| content: valuebox
-#| title: "PAPERS WITH POLICY REACH"
-dict(icon="journal-text", color="warning", value=int(n_papers))
-```
-
-## Row {height="42%"}
-
-### Column {width="38%"}
-
-```{python}
-#| title: "MENTIONS BY SOURCE TYPE"
-fig = px.pie(type_df, names="source_type", values="citations", hole=0.55,
-             color="source_type",
-             color_discrete_map={"think tank": GOLD, "igo": TEAL, "government": BRICK, "other": MUTED})
-fig.update_traces(textfont_size=12, textinfo="label+value")
-fig.update_layout(showlegend=False, height=300)
-fig
-```
-
-### Column {width="62%"}
-
-```{python}
-#| title: "MENTIONS BY COUNTRY / IGO"
-top_c = country_df.head(12).sort_values("citations").copy()
-top_c["country_disp"] = top_c["country"].apply(short)
-fig = px.bar(top_c, x="citations", y="country_disp", orientation="h", hover_name="country")
-fig.update_traces(marker_color=GOLD)
-fig.update_layout(height=300, yaxis_title="", xaxis_title="")
-fig
-```
-
-## Row {height="42%"}
-
-```{python}
-#| title: "TOP CITING ORGANIZATIONS"
-top_o = orgs_df.head(12).sort_values("citations").copy()
-top_o["org_disp"] = top_o["org"].apply(short)
-fig = px.bar(top_o, x="citations", y="org_disp", orientation="h", color="source_type", hover_name="org",
-             color_discrete_map={"think tank": GOLD, "igo": TEAL, "government": BRICK, "other": MUTED})
-fig.update_layout(height=320, yaxis_title="", xaxis_title="", legend_title="")
-fig
-```
-
-# By Paper
-
-## Row {height="55%"}
-
-```{python}
-#| title: "CITATIONS PER PAPER"
-tp = top_papers.sort_values("citations").copy()
-tp["paper_disp"] = tp["paper"].apply(lambda s: short(s, 55))
-fig = px.bar(tp, x="citations", y="paper_disp", orientation="h", hover_name="paper")
-fig.update_traces(marker_color=GOLD)
-fig.update_layout(height=420, yaxis_title="", xaxis_title="", margin=dict(l=10, r=10, t=20, b=10))
-fig
-```
-
-## Row {height="45%"}
-
-```{python}
-#| title: "PAPER REGISTRY — RANKED BY POLICY CITATIONS"
-from IPython.display import HTML
-disp = top_papers.copy()
-disp["DOI"] = disp["doi"].apply(
-    lambda d: f'<a href="https://doi.org/{d}" target="_blank">{d}</a>' if pd.notna(d) else "—"
-)
-disp = disp.rename(columns={"paper": "Cited paper", "citations": "Citations"})[["Cited paper", "DOI", "Citations"]]
-HTML(disp.to_html(index=False, escape=False))
-```
-
-# By Organization
-
-## Row {height="55%"}
-
-### Column {width="55%"}
-
-```{python}
-#| title: "REACH BY ORGANIZATION (TOP 15)"
-to = orgs_df.head(15).sort_values("citations").copy()
-to["org_disp"] = to["org"].apply(short)
-fig = px.bar(to, x="citations", y="org_disp", orientation="h", color="source_type", hover_name="org",
-             color_discrete_map={"think tank": GOLD, "igo": TEAL, "government": BRICK, "other": MUTED})
-fig.update_layout(height=420, yaxis_title="", xaxis_title="", legend_title="")
-fig
-```
-
-### Column {width="45%"}
-
-```{python}
-#| title: "ORGANIZATION TYPE × CITATIONS"
-fig = px.treemap(orgs_df, path=["source_type", "org"], values="citations",
-                  color="source_type",
-                  color_discrete_map={"think tank": GOLD, "igo": TEAL, "government": BRICK, "other": MUTED})
-fig.update_traces(textfont_size=11)
-fig.update_layout(height=420, margin=dict(l=4, r=4, t=20, b=4))
-fig
-```
-
-## Row {height="45%"}
-
-```{python}
-#| title: "ORGANIZATION REGISTRY"
-from IPython.display import HTML
-disp = orgs_df.copy()
-disp["Most recent citation"] = disp["latest"].dt.strftime("%Y-%m-%d")
-disp["Document"] = disp["doc_url"].apply(
-    lambda u: f'<a href="{u}" target="_blank">link</a>' if pd.notna(u) else "—"
-)
-disp = disp.rename(columns={"org": "Organization", "country": "Country", "source_type": "Type", "citations": "Citations"})
-disp = disp[["Organization", "Country", "Type", "Citations", "Most recent citation", "Document"]]
-HTML(disp.to_html(index=False, escape=False))
-```
-
-# Topics & Reach
-
-## Row {height="50%"}
-
-### Column {width="55%"}
-
-```{python}
-#| title: "MOST-LINKED TOPICS"
-tt = topics_s.head(15).sort_values("count").copy()
-tt["topic_disp"] = tt["topic"].apply(short)
-fig = px.bar(tt, x="count", y="topic_disp", orientation="h", hover_name="topic")
-fig.update_traces(marker_color=TEAL)
-fig.update_layout(height=380, yaxis_title="", xaxis_title="")
-fig
-```
-
-### Column {width="45%"}
-
-```{python}
-#| title: "POLICY MENTIONS OVER TIME (BY YEAR)"
-fig = px.area(timeline, x="year", y="citations")
-fig.update_traces(line_color=GOLD, fillcolor="rgba(212,162,76,0.18)")
-fig.update_layout(height=380, xaxis_title="", yaxis_title="")
-fig
-```
-
-## Row {height="50%"}
-
-```{python}
-#| title: "MENTION TYPE — POLICY CITATION VS. NAME MENTION"
+# Keep the generated data bundle aligned with the custom index.html page.
+topics_out = topics_s.head(15).to_dict(orient="records")
+countries_out = country_df.head(12).to_dict(orient="records")
 td = df["Type"].value_counts().reset_index()
 td.columns = ["type", "count"]
-fig = px.bar(td, x="count", y="type", orientation="h", color="type",
-             color_discrete_map={"Policy citation": GOLD, "Name mention": MUTED})
-fig.update_layout(height=220, yaxis_title="", xaxis_title="", showlegend=False)
-fig
+orgs_out = orgs_df.copy()
+orgs_out["latest"] = orgs_out["latest"].dt.strftime("%Y-%m-%d")
+
+bundle = {
+    "summary": {
+        "total": int(n_total),
+        "orgs": int(n_orgs),
+        "countries": int(n_countries),
+        "papers": int(n_papers),
+    },
+    "top_papers": top_papers.where(pd.notna(top_papers), None).to_dict(orient="records"),
+    "orgs": orgs_out.where(pd.notna(orgs_out), None).to_dict(orient="records"),
+    "topics": topics_out,
+    "timeline": timeline.to_dict(orient="records"),
+    "countries": countries_out,
+    "types": type_df.to_dict(orient="records"),
+    "mention_types": td.to_dict(orient="records"),
+}
+
+HTML_PREFIX = '<!doctype html>\n<html lang="en">\n<head>\n<meta charset="utf-8" />\n<meta name="viewport" content="width=device-width, initial-scale=1" />\n<title>Policy Citations</title>\n<link rel="preconnect" href="https://fonts.googleapis.com">\n<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">\n<script src="https://cdn.plot.ly/plotly-2.32.0.min.js"></script>\n<style>\n:root{\n  --ink:#121A30;\n  --ink-card:#1B2747;\n  --ink-card-2:#202E54;\n  --hairline:rgba(212,162,76,0.22);\n  --gold:#D4A24C;\n  --teal:#3FA092;\n  --brick:#C1654A;\n  --muted:#93A0C2;\n  --paper:#F4F0E6;\n  --display:\'Fraunces\', Georgia, serif;\n  --body:\'Inter\', -apple-system, sans-serif;\n  --mono:\'IBM Plex Mono\', monospace;\n}\n*{box-sizing:border-box;}\nbody{\n  margin:0; background:var(--ink); color:var(--paper);\n  font-family:var(--body); -webkit-font-smoothing:antialiased;\n}\na{color:var(--gold);}\na:hover{color:var(--teal);}\n\n/* ---- Header / masthead ---- */\n.masthead{\n  border-bottom:1px solid var(--hairline);\n  padding:28px clamp(20px,5vw,56px) 0;\n  position:relative;\n}\n.masthead-top{\n  display:flex; justify-content:space-between; align-items:flex-start; gap:24px;\n  flex-wrap:wrap;\n}\n.eyebrow{\n  font-family:var(--mono); font-size:11px; letter-spacing:.14em; text-transform:uppercase;\n  color:var(--gold); margin:0 0 10px;\n}\nh1.title{\n  font-family:var(--display); font-weight:600; font-size:clamp(28px,3.4vw,42px);\n  margin:0 0 6px; letter-spacing:-0.01em;\n}\n.subtitle{ color:var(--muted); font-size:15px; margin:0 0 22px; max-width:640px;}\n.masthead-meta{\n  font-family:var(--mono); font-size:11px; color:var(--muted); text-align:right;\n  line-height:1.6;\n}\n.masthead-meta b{ color:var(--paper); }\n\n/* ---- Tabs ---- */\n.tabs{\n  display:flex; gap:2px; margin-top:6px; overflow-x:auto;\n}\n.tab-btn{\n  font-family:var(--mono); font-size:12px; letter-spacing:.08em; text-transform:uppercase;\n  background:none; border:none; color:var(--muted); padding:12px 18px;\n  cursor:pointer; border-bottom:2px solid transparent; white-space:nowrap;\n  transition:color .15s, border-color .15s;\n}\n.tab-btn:hover{ color:var(--paper); }\n.tab-btn.active{ color:var(--gold); border-bottom-color:var(--gold); }\n\nmain{ padding:28px clamp(20px,5vw,56px) 64px; max-width:1320px; margin:0 auto; }\n.page{ display:none; }\n.page.active{ display:block; animation:fade .25s ease; }\n@keyframes fade{ from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:translateY(0);} }\n\n/* ---- Grid / cards ---- */\n.row{ display:grid; gap:16px; margin-bottom:16px; }\n.row.cols-4{ grid-template-columns:repeat(4,1fr); }\n.row.cols-2-60-40{ grid-template-columns:60% 1fr; }\n.row.cols-2-55-45{ grid-template-columns:55% 1fr; }\n.row.cols-2-38-62{ grid-template-columns:38% 1fr; }\n@media (max-width:880px){\n  .row.cols-4{ grid-template-columns:repeat(2,1fr); }\n  .row.cols-2-60-40, .row.cols-2-55-45, .row.cols-2-38-62{ grid-template-columns:1fr; }\n}\n\n.card{\n  background:var(--ink-card); border:1px solid var(--hairline); border-radius:3px;\n  overflow:hidden;\n}\n.card-head{\n  font-family:var(--mono); font-size:11px; letter-spacing:.08em; text-transform:uppercase;\n  color:var(--muted); padding:13px 16px 11px; border-bottom:1px solid var(--hairline);\n}\n.card-body{ padding:14px 16px; }\n.card-body.tight{ padding:6px 10px; }\n\n/* ---- Value boxes ---- */\n.vbox{ padding:18px 18px 16px; position:relative; }\n.vbox .icon{ position:absolute; top:16px; right:16px; opacity:.35; font-size:20px; }\n.vbox .vlabel{\n  font-family:var(--mono); font-size:11px; letter-spacing:.07em; text-transform:uppercase; color:var(--muted);\n}\n.vbox .vvalue{\n  font-family:var(--display); font-weight:600; font-size:2.3rem; margin-top:6px; line-height:1;\n}\n.vbox.gold{ border-left:3px solid var(--gold); }\n.vbox.teal{ border-left:3px solid var(--teal); }\n.vbox.brick{ border-left:3px solid var(--brick); }\n.vbox.muted2{ border-left:3px solid var(--muted); }\n\n/* ---- Tables ---- */\ntable{ width:100%; border-collapse:collapse; font-size:13.5px; }\nthead th{\n  font-family:var(--mono); font-size:10.5px; letter-spacing:.06em; text-transform:uppercase;\n  color:var(--muted); text-align:left; padding:9px 10px; border-bottom:1px solid var(--hairline);\n  position:sticky; top:0; background:var(--ink-card);\n}\ntbody td{ padding:9px 10px; border-bottom:1px solid rgba(255,255,255,0.06); vertical-align:top; }\ntbody tr:hover{ background:rgba(255,255,255,0.025); }\n.scroll-table{ max-height:420px; overflow-y:auto; }\n.mono{ font-family:var(--mono); font-size:12px; color:var(--muted); }\n.num{ font-family:var(--mono); text-align:right; color:var(--paper); }\n.rank{ font-family:var(--mono); color:var(--gold); width:34px; }\n\n.seal{ display:inline-block; width:8px; height:8px; border-radius:50%; margin-right:7px; }\n.seal.gold{ background:var(--gold); } .seal.teal{ background:var(--teal); }\n.seal.brick{ background:var(--brick); } .seal.muted2{ background:var(--muted); }\n\n.legend{ display:flex; gap:16px; flex-wrap:wrap; padding:10px 16px 4px; font-size:12px; color:var(--muted); }\n.legend span{ display:inline-flex; align-items:center; }\n\n.foot-note{\n  font-family:var(--mono); font-size:11px; color:var(--muted); margin-top:6px; padding:0 2px;\n}\n.plot{ width:100%; }\n</style>\n</head>\n<body>\n\n<header class="masthead">\n  <div class="masthead-top">\n    <div>\n      <p class="eyebrow">Research → Policy · Citations</p>\n      <h1 class="title">Policy Citations</h1>\n      <p class="subtitle">Where our research reaches policy makers</p>\n    </div>\n    <div class="masthead-meta" id="meta-block"></div>\n  </div>\n  <nav class="tabs" id="tabs"></nav>\n</header>\n\n<main id="pages"></main>\n\n<script id="bundle-data" type="application/json">'
+HTML_SUFFIX = '</script>\n<script>(function(){\n  // Guard against the host page re-running this script against an\n  // already-built DOM (some embedded preview panes re-execute inline\n  // scripts on resize/remount) — without this, every chart gets drawn\n  // again on top of itself.\n  if (window.__policyImpactRegisterInit) return;\n  window.__policyImpactRegisterInit = true;\n\n  const DATA = JSON.parse(document.getElementById(\'bundle-data\').textContent);\n\n  const COLORS = { gold: \'#D4A24C\', teal: \'#3FA092\', brick: \'#C1654A\', muted: \'#93A0C2\' };\n  const TYPE_COLOR = { \'think tank\': \'gold\', igo: \'teal\', government: \'brick\', other: \'muted2\' };\n  const TYPE_HEX   = { \'think tank\': COLORS.gold, igo: COLORS.teal, government: COLORS.brick, other: COLORS.muted };\n\n  function truncate(s, n){\n    if (!s) return s;\n    return s.length > n ? s.slice(0, n - 1).trimEnd() + \'…\' : s;\n  }\n\n  // ---------------- Plotly base layout ----------------\n  const baseLayout = (extra) => Object.assign({\n    paper_bgcolor: \'#1B2747\',\n    plot_bgcolor: \'#1B2747\',\n    showlegend: false,\n    font: { family: \'Inter, sans-serif\', color: \'#F4F0E6\', size: 12 },\n    margin: { l: 10, r: 14, t: 10, b: 30 },\n    xaxis: { title: \'\', gridcolor: \'rgba(255,255,255,0.07)\', zerolinecolor: \'rgba(255,255,255,0.07)\', automargin: true },\n    yaxis: { title: \'\', gridcolor: \'rgba(255,255,255,0.07)\', zerolinecolor: \'rgba(255,255,255,0.07)\', automargin: true },\n  }, extra);\n  const plotConfig = { displayModeBar: false, responsive: true };\n\n  // Always clear any prior render on this div before drawing — cheap\n  // insurance against double-initialization on top of the guard above.\n  function drawPlot(id, traces, layoutExtra){\n    const el = document.getElementById(id);\n    if (!el) return;\n    if (el.dataset.plotted) { try { Plotly.purge(el); } catch(e){} }\n    Plotly.newPlot(id, traces, baseLayout(layoutExtra), plotConfig);\n    el.dataset.plotted = \'1\';\n  }\n\n  // ---------------- Masthead meta ----------------\n  document.getElementById(\'meta-block\').innerHTML =\n    `<div><b>${DATA.summary.total}</b> mentions logged</div>\n     <div>${DATA.summary.orgs} organizations · ${DATA.summary.countries} countries/IGOs</div>`;\n\n  // ---------------- Page definitions ----------------\n  const PAGES = [\n    { id: \'overview\', label: \'Overview\' },\n    { id: \'papers\', label: \'By Paper\' },\n    { id: \'orgs\', label: \'By Organization\' },\n    { id: \'topics\', label: \'Topics & Reach\' },\n  ];\n\n  const tabsEl = document.getElementById(\'tabs\');\n  const pagesEl = document.getElementById(\'pages\');\n  tabsEl.innerHTML = \'\';\n  pagesEl.innerHTML = \'\';\n\n  PAGES.forEach((p, i) => {\n    const btn = document.createElement(\'button\');\n    btn.className = \'tab-btn\' + (i === 0 ? \' active\' : \'\');\n    btn.textContent = p.label;\n    btn.dataset.target = p.id;\n    btn.addEventListener(\'click\', () => showPage(p.id));\n    tabsEl.appendChild(btn);\n\n    const sec = document.createElement(\'section\');\n    sec.className = \'page\' + (i === 0 ? \' active\' : \'\');\n    sec.id = \'page-\' + p.id;\n    pagesEl.appendChild(sec);\n  });\n\n  const rendered = {};\n  function showPage(id){\n    document.querySelectorAll(\'.tab-btn\').forEach(b => b.classList.toggle(\'active\', b.dataset.target === id));\n    document.querySelectorAll(\'.page\').forEach(s => s.classList.toggle(\'active\', s.id === \'page-\' + id));\n    if (!rendered[id]){ BUILDERS[id](); rendered[id] = true; }\n    else { window.dispatchEvent(new Event(\'resize\')); }\n  }\n\n  // ====================================================================\n  // OVERVIEW\n  // ====================================================================\n  function buildOverview(){\n    const root = document.getElementById(\'page-overview\');\n\n    const vb = (label, value, cls, icon) => `\n      <div class="card vbox ${cls}">\n        <div class="vlabel">${label}</div>\n        <div class="vvalue">${value}</div>\n        <div class="icon">${icon}</div>\n      </div>`;\n\n    root.innerHTML = `\n      <div class="row cols-4">\n        ${vb(\'Policy Mentions\', DATA.summary.total, \'gold\', \'📄\')}\n        ${vb(\'Citing Organizations\', DATA.summary.orgs, \'teal\', \'🏛\')}\n        ${vb(\'Countries & IGOs Reached\', DATA.summary.countries, \'brick\', \'🌐\')}\n        ${vb(\'Papers With Policy Reach\', DATA.summary.papers, \'muted2\', \'📚\')}\n      </div>\n      <div class="row cols-2-38-62">\n        <div class="card">\n          <div class="card-head">Mentions by source type</div>\n          <div class="card-body"><div id="chart-type" class="plot"></div></div>\n        </div>\n        <div class="card">\n          <div class="card-head">Mentions by country / IGO</div>\n          <div class="card-body"><div id="chart-country" class="plot"></div></div>\n        </div>\n      </div>\n      <div class="row">\n        <div class="card">\n          <div class="card-head">Top citing organizations</div>\n          <div class="card-body"><div id="chart-top-orgs" class="plot"></div></div>\n        </div>\n      </div>`;\n\n    drawPlot(\'chart-type\',\n      [{\n        type: \'pie\', hole: 0.55,\n        labels: DATA.types.map(t => t.source_type),\n        values: DATA.types.map(t => t.citations),\n        marker: { colors: DATA.types.map(t => TYPE_HEX[t.source_type] || COLORS.muted), line: { color: \'#1B2747\', width: 2 } },\n        textinfo: \'label+value\', textposition: \'outside\', textfont: { size: 11 },\n        showlegend: false,\n      }],\n      { height: 300, margin: { l: 30, r: 30, t: 30, b: 30 } });\n\n    const ctop = DATA.countries.slice(0, 12).slice().reverse();\n    drawPlot(\'chart-country\',\n      [{ type: \'bar\', orientation: \'h\',\n         x: ctop.map(c => c.citations), y: ctop.map(c => truncate(c.country, 22)),\n         hovertext: ctop.map(c => c.country), hoverinfo: \'text+x\',\n         marker: { color: COLORS.gold } }],\n      { height: 300 });\n\n    const otop = DATA.orgs.slice(0, 12).slice().reverse();\n    const groups = {};\n    otop.forEach(o => { (groups[o.source_type] = groups[o.source_type] || []).push(o); });\n    const traces = Object.keys(groups).map(st => ({\n      type: \'bar\', orientation: \'h\', name: st,\n      x: otop.map(o => o.source_type === st ? o.citations : 0),\n      y: otop.map(o => truncate(o.org, 30)),\n      hovertext: otop.map(o => o.org), hoverinfo: \'text+x\',\n      marker: { color: TYPE_HEX[st] || COLORS.muted },\n    }));\n    drawPlot(\'chart-top-orgs\', traces,\n      { height: 360, barmode: \'stack\', showlegend: true,\n        legend: { orientation: \'h\', y: 1.1, font: { size: 11 } },\n        margin: { l: 10, r: 14, t: 36, b: 30 } });\n  }\n\n  // ====================================================================\n  // BY PAPER\n  // ====================================================================\n  function buildPapers(){\n    const root = document.getElementById(\'page-papers\');\n    root.innerHTML = `\n      <div class="row">\n        <div class="card">\n          <div class="card-head">Citations per paper</div>\n          <div class="card-body"><div id="chart-papers" class="plot"></div></div>\n        </div>\n      </div>\n      <div class="row">\n        <div class="card">\n          <div class="card-head">Paper registry — ranked by policy citations</div>\n          <div class="card-body tight scroll-table"><table id="table-papers"></table></div>\n        </div>\n      </div>`;\n\n    const tp = DATA.top_papers.slice().reverse();\n    drawPlot(\'chart-papers\',\n      [{ type: \'bar\', orientation: \'h\',\n         x: tp.map(p => p.citations), y: tp.map(p => truncate(p.paper, 60)),\n         hovertext: tp.map(p => p.paper), hoverinfo: \'text+x\',\n         marker: { color: COLORS.gold } }],\n      { height: 460, margin: { l: 10, r: 14, t: 10, b: 30 } });\n\n    const rows = DATA.top_papers.map((p, i) => `\n      <tr>\n        <td class="rank">${String(i + 1).padStart(2, \'0\')}</td>\n        <td>${p.paper}</td>\n        <td class="mono">${p.doi ? `<a href="https://doi.org/${p.doi}" target="_blank" rel="noopener">${p.doi}</a>` : \'—\'}</td>\n        <td class="num">${p.citations}</td>\n      </tr>`).join(\'\');\n    document.getElementById(\'table-papers\').innerHTML = `\n      <thead><tr><th>No.</th><th>Cited paper</th><th>DOI</th><th>Citations</th></tr></thead>\n      <tbody>${rows}</tbody>`;\n  }\n\n  // ====================================================================\n  // BY ORGANIZATION\n  // ====================================================================\n  function buildOrgs(){\n    const root = document.getElementById(\'page-orgs\');\n    root.innerHTML = `\n      <div class="row cols-2-55-45">\n        <div class="card">\n          <div class="card-head">Reach by organization (top 15)</div>\n          <div class="card-body"><div id="chart-orgs" class="plot"></div></div>\n        </div>\n        <div class="card">\n          <div class="card-head">Organization type × citations</div>\n          <div class="card-body"><div id="chart-treemap" class="plot"></div></div>\n        </div>\n      </div>\n      <div class="row">\n        <div class="card">\n          <div class="card-head">Organization registry</div>\n          <div class="legend">\n            <span><span class="seal gold"></span>think tank</span>\n            <span><span class="seal teal"></span>igo</span>\n            <span><span class="seal brick"></span>government</span>\n            <span><span class="seal muted2"></span>other</span>\n          </div>\n          <div class="card-body tight scroll-table"><table id="table-orgs"></table></div>\n        </div>\n      </div>`;\n\n    const o15 = DATA.orgs.slice(0, 15).slice().reverse();\n    const groups = {};\n    o15.forEach(o => { (groups[o.source_type] = groups[o.source_type] || []).push(o); });\n    const traces = Object.keys(groups).map(st => ({\n      type: \'bar\', orientation: \'h\', name: st,\n      x: o15.map(o => o.source_type === st ? o.citations : 0),\n      y: o15.map(o => truncate(o.org, 30)),\n      hovertext: o15.map(o => o.org), hoverinfo: \'text+x\',\n      marker: { color: TYPE_HEX[st] || COLORS.muted },\n    }));\n    drawPlot(\'chart-orgs\', traces,\n      { height: 440, barmode: \'stack\', showlegend: false, margin: { l: 10, r: 14, t: 10, b: 30 } });\n\n    const typeOrder = [...new Set(DATA.orgs.map(o => o.source_type))];\n    const typeTotals = {};\n    DATA.orgs.forEach(o => { typeTotals[o.source_type] = (typeTotals[o.source_type] || 0) + o.citations; });\n    const grandTotal = Object.values(typeTotals).reduce((a, b) => a + b, 0);\n    drawPlot(\'chart-treemap\',\n      [{\n        type: \'treemap\',\n        ids:     [\'root\', ...typeOrder, ...DATA.orgs.map((o, i) => `org-${i}`)],\n        labels:  [\'All organizations\', ...typeOrder, ...DATA.orgs.map(o => truncate(o.org, 24))],\n        parents: [\'\', ...typeOrder.map(() => \'root\'), ...DATA.orgs.map(o => o.source_type)],\n        values:  [grandTotal, ...typeOrder.map(t => typeTotals[t]), ...DATA.orgs.map(o => o.citations)],\n        hovertext: [\'All organizations\', ...typeOrder, ...DATA.orgs.map(o => o.org)],\n        hoverinfo: \'text+value\',\n        marker: { colors: [\'rgba(0,0,0,0)\', ...typeOrder.map(t => TYPE_HEX[t] || COLORS.muted), ...DATA.orgs.map(o => TYPE_HEX[o.source_type] || COLORS.muted)] },\n        textfont: { size: 11 },\n        branchvalues: \'total\',\n      }],\n      { height: 440, margin: { l: 4, r: 4, t: 10, b: 4 } });\n\n    const rows = DATA.orgs.map(o => `\n      <tr>\n        <td><span class="seal ${TYPE_COLOR[o.source_type] || \'muted2\'}"></span>${o.org}</td>\n        <td>${o.country}</td>\n        <td class="mono">${o.source_type}</td>\n        <td class="num">${o.citations}</td>\n        <td class="mono">${o.latest || \'—\'}</td>\n        <td>${o.doc_url ? `<a href="${o.doc_url}" target="_blank" rel="noopener">link</a>` : \'—\'}</td>\n      </tr>`).join(\'\');\n    document.getElementById(\'table-orgs\').innerHTML = `\n      <thead><tr><th>Organization</th><th>Country</th><th>Type</th><th>Citations</th><th>Most recent</th><th>Document</th></tr></thead>\n      <tbody>${rows}</tbody>`;\n  }\n\n  // ====================================================================\n  // TOPICS & REACH\n  // ====================================================================\n  function buildTopics(){\n    const root = document.getElementById(\'page-topics\');\n    root.innerHTML = `\n      <div class="row cols-2-55-45">\n        <div class="card">\n          <div class="card-head">Most-linked topics</div>\n          <div class="card-body"><div id="chart-topics" class="plot"></div></div>\n        </div>\n        <div class="card">\n          <div class="card-head">Policy mentions over time (by year)</div>\n          <div class="card-body"><div id="chart-timeline" class="plot"></div></div>\n        </div>\n      </div>\n      <div class="row">\n        <div class="card">\n          <div class="card-head">Mention type — policy citation vs. name mention</div>\n          <div class="card-body"><div id="chart-mtype" class="plot"></div></div>\n        </div>\n      </div>`;\n\n    const tt = DATA.topics.slice().reverse();\n    drawPlot(\'chart-topics\',\n      [{ type: \'bar\', orientation: \'h\',\n         x: tt.map(t => t.count), y: tt.map(t => truncate(t.topic, 30)),\n         hovertext: tt.map(t => t.topic), hoverinfo: \'text+x\',\n         marker: { color: COLORS.teal } }],\n      { height: 380 });\n\n    drawPlot(\'chart-timeline\',\n      [{ type: \'scatter\', mode: \'lines\', fill: \'tozeroy\',\n         x: DATA.timeline.map(t => t.year), y: DATA.timeline.map(t => t.citations),\n         line: { color: COLORS.gold }, fillcolor: \'rgba(212,162,76,0.18)\' }],\n      { height: 380, xaxis: { gridcolor: \'rgba(255,255,255,0.07)\', automargin: true } });\n\n    drawPlot(\'chart-mtype\',\n      [{ type: \'bar\', orientation: \'h\',\n         x: DATA.mention_types.map(t => t.count), y: DATA.mention_types.map(t => t.type),\n         marker: { color: DATA.mention_types.map(t => t.type === \'Policy citation\' ? COLORS.gold : COLORS.muted) } }],\n      { height: 180 });\n  }\n\n  const BUILDERS = { overview: buildOverview, papers: buildPapers, orgs: buildOrgs, topics: buildTopics };\n\n  // Render the first page on load\n  BUILDERS.overview();\n  rendered.overview = true;\n\n  window.addEventListener(\'resize\', () => {\n    document.querySelectorAll(\'.plot\').forEach(el => { if (el.id && el.dataset.plotted) Plotly.Plots.resize(el); });\n  });\n})();\n</script>\n</body>\n</html>\n'
+
+Path("index.html").write_text(
+    HTML_PREFIX + json.dumps(bundle, indent=2) + HTML_SUFFIX,
+    encoding="utf-8",
+)
+```
+
+```{python}
+from IPython.display import HTML
+HTML('<p><a href="index.html">Open the generated policy citations dashboard</a></p>')
 ```
