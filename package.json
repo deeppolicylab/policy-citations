@@ -1,0 +1,9 @@
+{
+  "name": "policy-citation-dashboard",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "build": "python3 update-dashboard-data.py",
+    "serve": "python3 -m http.server 8000"
+  }
+}
