@@ -13,8 +13,8 @@ from pathlib import Path
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_CSV = ROOT / "data" / "policy-impact-export.csv"
-DEFAULT_OUTPUT = ROOT / "data" / "dashboard-data.js"
+DEFAULT_CSV =  "policy-impact-export.csv"
+DEFAULT_OUTPUT =  "dashboard-data.js"
 
 FIELD_MAP = {
     "mention_type": "Type",
@@ -47,7 +47,7 @@ def parse_date(value: str) -> str:
     value = clean(value)
     if not value:
         return ""
-    for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%m/%d/%Y", "%d/%m/%Y"):
+    for fmt in ("%Y-%m-%d", "%Y/%m/%d", "%m/%d/%Y", "%m/%d/%y", "%d/%m/%Y", "%d/%m/%y"):
         try:
             return datetime.strptime(value, fmt).date().isoformat()
         except ValueError:
